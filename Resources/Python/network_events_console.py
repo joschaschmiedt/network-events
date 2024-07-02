@@ -1,21 +1,22 @@
-from __future__ import print_function, unicode_literals
-
 import zmq
 
-try:
-    raw_input
-except NameError:
-    # Python 3
-    raw_input = input
 
-
-def run(hostname='localhost', port=5556):
+def run(hostname="localhost", port=5556):
     with zmq.Context() as ctx:
         with ctx.socket(zmq.REQ) as sock:
-            sock.connect('tcp://%s:%d' % (hostname, port))
-            while True:
+            sock.connect(f"tcp://{hostname}:{port}")
+            # set timeouts to 1 second
+            sock.setsockopt(zmq.RCVTIMEO, 1000)
+            sock.setsockopt(zmq.SNDTIMEO, 1000)
+            req = ""
+            while req != "exit":
                 try:
-                    req = raw_input('> ')
+                    req = input("> ")
+
+                    if req == "help":
+                        print_help()
+                        continue
+
                     sock.send_string(req)
                     rep = sock.recv_string()
                     print(rep)
@@ -24,5 +25,24 @@ def run(hostname='localhost', port=5556):
                     break
 
 
-if __name__ == '__main__':
+def print_help():
+    print("Commands:")
+    print("    StartAcquisition")
+    print("    StopAcquisition")
+    print("    IsAcquiring")
+    print(
+        "    StartRecord [RecDir=<path>] [PrependText=<text>] [AppendText=<text>] [CreateNewDir=1]"
+    )
+    print("    StopRecord")
+    print("    IsRecording")
+    print("    GetRecordingPath")
+    print("    TTL [Line=<line>] [State=<on/off>]")
+    print("    TTL [Word=<word>]")
+    print("    exit")
+
+
+if __name__ == "__main__":
+
+    print("Welcome to the Open Ephys Network Events debug console!")
+    print("Type 'exit' to quit. Try 'help' for a list of commands.")
     run()
