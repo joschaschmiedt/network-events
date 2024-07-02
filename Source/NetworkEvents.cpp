@@ -280,41 +280,43 @@ String NetworkEvents::handleSpecialMessages(const String& s)
     }
     else if (cmd.compareIgnoreCase("TTL") == 0)
     {
-        // Default to line 1 and off (if no optional info sent)
-        int line = 0;
-        bool onOff = 0;
-
-        for (int i = 0; i < keys.size(); ++i)
+        if (dict.containsKey("Word"))
         {
-            String key = keys[i];
-            int value = dict[key].getIntValue();
-
-            if (key.compareIgnoreCase("Line") == 0)
-            {
-                // Make sure in range
-                if (value <= 256 && value >= 1)
-                {
-                    line = value - 1;
-                }
-                else
-                {
-                    return "InvalidChannel";
-                }
-            }
-            else if (key.compareIgnoreCase("State") == 0)
-            {
-                onOff = value;
-            }
-        }
-        {
-            ScopedLock TTLlock(TTLqueueLock);
+            uint64_t word = dict["Word"].getLargeIntValue();
             if (CoreServices::getAcquisitionStatus())
             {
-                TTLQueue.push({onOff, line});
+                ScopedLock TTLWordLock(TTLWordQueueLock);
+                TTLWordQueue.push(word);
             }
+            return "TTLHandled: Word=" + String(word);
         }
 
-        return "TTLHandled: Line=" + String(line + 1) + " State=" + String(int(onOff));
+        if (dict.containsKey("Line"))
+        {
+            // received line is 1-based
+            int line = dict["Line"].getIntValue() - 1;
+            if (line > 255 || line < 0)
+            {
+                return "InvalidChannel";
+            }
+
+            // Default to line 1 and off (if no optional info sent)
+            bool onOff = false;
+            if (dict.containsKey("State"))
+            {
+                onOff = static_cast<bool>(dict["State"].getIntValue());
+            }
+
+            if (CoreServices::getAcquisitionStatus())
+            {
+                ScopedLock TTLlock(TTLqueueLock);
+                TTLQueue.push({onOff, line});
+            }
+
+            return "TTLHandled: Line=" + String(line + 1) + " State=" + String(static_cast<int>(onOff));
+        }
+
+        return "TTLNotHandled";
     }
 
     return String("NotHandled");
@@ -326,6 +328,24 @@ void NetworkEvents::triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum)
     {
         TTLEventPtr event = TTLEvent::createTTLEvent(ttlChannel, sampleNum, TTLmsg.eventLine, TTLmsg.onOff);
         addEvent(event, 0);
+    }
+}
+
+void NetworkEvents::triggerTTLWord(uint64_t word, juce::int64 sample, uint64_t lastWord)
+{
+    for (const auto ttlChannel : ttlChannels)
+    {
+        constexpr auto maxTTLBits = 64u;
+
+        // the createTTLEvent factory method requires to create an event for each bit that has changed
+        for (uint8 bit = 0; bit < maxTTLBits; ++bit)
+        {
+            if (((word >> bit) & 0x01))  // TODO: Should we only modify the changed bits? != ((lastWord >> bit) & 0x01))
+            {
+                addEvent(TTLEvent::createTTLEvent(ttlChannel, sample, bit, (word >> bit) & 0x01, word),
+                         0); // TODO: Why does sampleNum have to be 0?
+            }
+        }
     }
 }
 
@@ -355,6 +375,16 @@ void NetworkEvents::process(AudioBuffer<float>& buffer)
                     const StringTTL& TTLmsg = TTLQueue.front();
                     triggerTTLEvent(TTLmsg, sampNum);
                     TTLQueue.pop();
+                }
+            }
+
+            {
+                ScopedLock TTLWordLock(TTLWordQueueLock);
+                while (!TTLWordQueue.empty())
+                {
+                    triggerTTLWord(TTLWordQueue.front(), sampNum, lastReceivedTTLWord);
+                    lastReceivedTTLWord = TTLWordQueue.front();
+                    TTLWordQueue.pop();
                 }
             }
         }

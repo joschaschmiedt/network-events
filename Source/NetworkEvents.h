@@ -163,9 +163,14 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     std::queue<StringTTL> TTLQueue;
     CriticalSection TTLqueueLock;
 
+    std::queue<uint64> TTLWordQueue;
+    CriticalSection TTLWordQueueLock;
+    uint64 lastReceivedTTLWord = 0;
+
     Array<EventChannel*> ttlChannels;
 
     void triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum);
+    void triggerTTLWord(uint64_t word, juce::int64 sample, uint64_t lastWord);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NetworkEvents);
 };
