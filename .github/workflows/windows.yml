@@ -22,9 +22,9 @@ jobs:
         cd ../..
         git clone https://github.com/open-ephys/plugin-GUI.git --branch main
         cd plugin-GUI/Build
-        cmake -G "Visual Studio 16 2019" -A x64 .. 
+        cmake -G "Visual Studio 16 2022" -A x64 .. 
         mkdir Release && cd Release
-        curl -L https://openephysgui.jfrog.io/artifactory/Libraries/open-ephys-lib-v0.6.0.zip --output open-ephys-lib.zip 
+        curl -L https://openephysgui.jfrog.io/artifactory/Libraries/open-ephys-lib-v0.6.7.zip --output open-ephys-lib.zip 
         unzip open-ephys-lib.zip
       shell: bash
     - name: configure
