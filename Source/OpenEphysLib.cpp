@@ -21,8 +21,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
-#include <PluginInfo.h>
 #include "NetworkEvents.h"
+#include <PluginInfo.h>
 #include <string>
 #ifdef _WIN32
 #include <Windows.h>
@@ -36,35 +36,33 @@ using namespace Plugin;
 
 extern "C" EXPORT void getLibInfo(Plugin::LibraryInfo* info)
 {
-	info->apiVersion = PLUGIN_API_VER;
-	info->name = "Network Events";
-	info->libVersion = "0.2.1";
-	info->numPlugins = NUM_PLUGINS;
+    info->apiVersion = PLUGIN_API_VER;
+    info->name = "Network Events";
+    info->libVersion = "0.2.1";
+    info->numPlugins = NUM_PLUGINS;
 }
 
 extern "C" EXPORT int getPluginInfo(int index, Plugin::PluginInfo* info)
 {
-	switch (index)
-	{
-	case 0:
-		info->type = Plugin::PROCESSOR;
-		info->processor.name = "Network Events";
-		info->processor.type = Plugin::Processor::FILTER;
-		info->processor.creator = &(Plugin::createProcessor<NetworkEvents>);
-		break;
-	default:
-		return -1;
-		break;
-	}
-	return 0;
+    switch (index)
+    {
+    case 0:
+        info->type = Plugin::PROCESSOR;
+        info->processor.name = "Network Events";
+        info->processor.type = Plugin::Processor::FILTER;
+        info->processor.creator = &(Plugin::createProcessor<NetworkEvents>);
+        break;
+    default:
+        return -1;
+        break;
+    }
+    return 0;
 }
 
 #ifdef WIN32
-BOOL WINAPI DllMain(IN HINSTANCE hDllHandle,
-	IN DWORD     nReason,
-	IN LPVOID    Reserved)
+BOOL WINAPI DllMain(IN HINSTANCE hDllHandle, IN DWORD nReason, IN LPVOID Reserved)
 {
-	return TRUE;
+    return TRUE;
 }
 
 #endif

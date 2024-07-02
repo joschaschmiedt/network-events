@@ -1,23 +1,23 @@
 /*
-    ------------------------------------------------------------------
+        ------------------------------------------------------------------
 
-    This file is part of the Open Ephys GUI
-    Copyright (C) 2013 Open Ephys
+        This file is part of the Open Ephys GUI
+        Copyright (C) 2013 Open Ephys
 
-    ------------------------------------------------------------------
+        ------------------------------------------------------------------
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -26,25 +26,24 @@
 
 #include <stdio.h>
 
-NetworkEventsEditor::NetworkEventsEditor(NetworkEvents* parentNode)
-    : GenericEditor(parentNode)
+NetworkEventsEditor::NetworkEventsEditor(NetworkEvents* parentNode) : GenericEditor(parentNode)
 
 {
-	desiredWidth = 180;
-    
+    desiredWidth = 180;
+
     processor = parentNode;
 
-	restartConnection = std::make_unique<UtilityButton>("Restart Connection", Font("Fira Code", "Regular", 15.0f));
-    restartConnection->setBounds(20,45,130,18);
+    restartConnection = std::make_unique<UtilityButton>("Restart Connection", Font("Fira Code", "Regular", 15.0f));
+    restartConnection->setBounds(20, 45, 130, 18);
     restartConnection->addListener(this);
     addAndMakeVisible(restartConnection.get());
-    
+
     urlLabel = std::make_unique<Label>("Port", "Port:");
-    urlLabel->setBounds(20,85,140,25);
+    urlLabel->setBounds(20, 85, 140, 25);
     addAndMakeVisible(urlLabel.get());
 
-	labelPort = std::make_unique<Label>("Port", processor->getCurrPortString());
-    labelPort->setBounds(70,85,80,18);
+    labelPort = std::make_unique<Label>("Port", processor->getCurrPortString());
+    labelPort->setBounds(70, 85, 80, 18);
     labelPort->setColour(Label::textColourId, Colours::white);
     labelPort->setColour(Label::backgroundColourId, Colours::grey);
     labelPort->setEditable(true);
@@ -52,34 +51,30 @@ NetworkEventsEditor::NetworkEventsEditor(NetworkEvents* parentNode)
     addAndMakeVisible(labelPort.get());
 }
 
-
-
 void NetworkEventsEditor::buttonClicked(Button* button)
 {
-	if (button == restartConnection.get())
-	{
-		processor->restartConnection();
-	}
+    if (button == restartConnection.get())
+    {
+        processor->restartConnection();
+    }
 }
 
 void NetworkEventsEditor::setLabelColor(juce::Colour color)
 {
-	labelPort->setColour(Label::backgroundColourId, color);
+    labelPort->setColour(Label::backgroundColourId, color);
 }
-
 
 void NetworkEventsEditor::setPortText(const String& text)
 {
     labelPort->setText(text, dontSendNotification);
 }
 
-
-void NetworkEventsEditor::labelTextChanged(juce::Label *label)
+void NetworkEventsEditor::labelTextChanged(juce::Label* label)
 {
     if (label == labelPort.get())
     {
-        NetworkEvents *p = (NetworkEvents *)getProcessor();
-        
+        NetworkEvents* p = (NetworkEvents*)getProcessor();
+
         uint16 port;
         if (!portFromString(label->getText(), &port))
         {
@@ -89,15 +84,12 @@ void NetworkEventsEditor::labelTextChanged(juce::Label *label)
         }
 
         p->setNewListeningPort(port);
-	}
+    }
 }
-
 
 NetworkEventsEditor::~NetworkEventsEditor()
 {
-
 }
-
 
 bool NetworkEventsEditor::portFromString(const String& portString, uint16* port)
 {

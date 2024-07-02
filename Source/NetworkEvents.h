@@ -1,23 +1,23 @@
 /*
-    ------------------------------------------------------------------
+        ------------------------------------------------------------------
 
-    This file is part of the Open Ephys GUI
-    Copyright (C) 2016 Open Ephys
+        This file is part of the Open Ephys GUI
+        Copyright (C) 2016 Open Ephys
 
-    ------------------------------------------------------------------
+        ------------------------------------------------------------------
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -26,26 +26,23 @@
 
 #include <ProcessorHeaders.h>
 
+#include <atomic>
 #include <list>
 #include <queue>
-#include <atomic>
 
-//#define ZEROMQ
+// #define ZEROMQ
 #ifdef ZEROMQ
-    #include <zmq.h>
+#include <zmq.h>
 #endif
 
 /**
  Sends incoming TCP/IP messages from 0MQ to the events buffer
 
-  @see GenericProcessor
+    @see GenericProcessor
 */
-class NetworkEvents : public GenericProcessor
-                    , public Thread
-                    , private AsyncUpdater
+class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdater
 {
-public:
-
+  public:
     /** Constructor */
     NetworkEvents();
 
@@ -57,13 +54,13 @@ public:
     AudioProcessorEditor* createEditor() override;
 
     /** Triggers TTLs on the appropriate channel*/
-    void process (AudioBuffer<float>& buffer) override;
+    void process(AudioBuffer<float>& buffer) override;
 
     /** Updates settings*/
     void updateSettings() override;
 
     /** Saves parameters*/
-    void saveCustomParametersToXml (XmlElement* parentElement) override;
+    void saveCustomParametersToXml(XmlElement* parentElement) override;
 
     /** Loads parameters */
     void loadCustomParametersFromXml(XmlElement* parentElement) override;
@@ -73,14 +70,14 @@ public:
     void run() override;
 
     // passing 0 corresponds to wildcard ("*") and picks any available port
-    void setNewListeningPort (uint16 port, bool synchronous = true);
+    void setNewListeningPort(uint16 port, bool synchronous = true);
 
     // gets a string for the editor's port input to reflect current urlport
     String getCurrPortString() const;
 
     void restartConnection();
 
-private:
+  private:
     struct StringTTL
     {
         bool onOff;
@@ -89,11 +86,12 @@ private:
 
     class ZMQContext
     {
-    public:
+      public:
         ZMQContext();
         ~ZMQContext();
         void* createSocket();
-    private:
+
+      private:
         void* context;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZMQContext);
@@ -102,7 +100,7 @@ private:
     // RAII wrapper for REP socket
     class Responder
     {
-    public:
+      public:
         // creates socket from given context and tries to bind to port.
         // if port is 0, chooses an available ephemeral port.
         Responder(uint16 port);
@@ -127,7 +125,7 @@ private:
         // sends a message. returns the same as zmq_send.
         int send(StringRef response);
 
-    private:
+      private:
         SharedResourcePointer<ZMQContext> context;
         void* socket;
         bool valid;
@@ -135,12 +133,12 @@ private:
         int lastErrno;
 
         static const int RECV_TIMEOUT_MS;
-        
+
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Responder);
     };
 
     void handleAsyncUpdate() override; // to change port asynchronously
-    
+
     String handleSpecialMessages(const String& s);
 
     //* Split network message into name/value pairs (name1=val1 name2=val2 etc) */
@@ -164,12 +162,12 @@ private:
 
     std::queue<StringTTL> TTLQueue;
     CriticalSection TTLqueueLock;
-    
+
     Array<EventChannel*> ttlChannels;
 
     void triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NetworkEvents);
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NetworkEvents);
 };
 
-#endif  // __NETWORKEVENT_H_91811541__
+#endif // __NETWORKEVENT_H_91811541__
