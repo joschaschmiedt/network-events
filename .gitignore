@@ -13,3 +13,11 @@
 
 # 3. macOS files
 .DS_Store
+
+
+# 4. Windows files
+Thumbs.db
+
+# 5. Visual Studio files
+.vs
+.vscode
