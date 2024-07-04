@@ -335,21 +335,10 @@ void NetworkEvents::triggerTTLWord(uint64_t word, juce::int64 sample, uint64_t l
 {
     for (const auto ttlChannel : ttlChannels)
     {
-        
+
         // TODO: Why does sampleNum have to be 0?
         // TODO: Do the values of line and state have any meaning?
-        addEvent(TTLEvent::createTTLEvent(ttlChannel, sample, 0, (word >> 0) & 0x01, word),
-                 0); 
-
-        //// the createTTLEvent factory method requires to create an event for each bit that has changed
-        //for (uint8 bit = 0; bit < maxTTLBits; ++bit)
-        //{
-        //    if (((word >> bit) & 0x01))  // TODO: Should we only modify the changed bits? != ((lastWord >> bit) & 0x01))
-        //    {
-        //        addEvent(TTLEvent::createTTLEvent(ttlChannel, sample, bit, (word >> bit) & 0x01, word),
-        //                 0); // TODO: Why does sampleNum have to be 0?
-        //    }
-        //}
+        addEvent(TTLEvent::createTTLEvent(ttlChannel, sample, 0, (word >> 0) & 0x01, word), 0);
     }
 }
 
@@ -397,6 +386,9 @@ void NetworkEvents::process(AudioBuffer<float>& buffer)
 
 void NetworkEvents::run()
 {
+
+    setCurrentThreadName("NetworkEvents");
+
 #ifdef ZEROMQ
     HeapBlock<char> buffer(MAX_MESSAGE_LENGTH);
 
