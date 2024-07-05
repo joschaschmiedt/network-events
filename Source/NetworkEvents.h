@@ -82,6 +82,13 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     {
         bool onOff;
         int eventLine;
+        int64 tickTimestampMsgReceived; // timestamp of received message in high-resolution ticks
+    };
+
+    struct StringWord
+    {
+        uint64 word;
+        int64 tickTimestampMsgReceived;  // timestamp of received message in high-resolution ticks
     };
 
     class ZMQContext
@@ -163,14 +170,14 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     std::queue<StringTTL> TTLQueue;
     CriticalSection TTLqueueLock;
 
-    std::queue<uint64> TTLWordQueue;
+    std::queue<StringWord> TTLWordQueue;
     CriticalSection TTLWordQueueLock;
-    uint64 lastReceivedTTLWord = 0;
+    
 
     Array<EventChannel*> ttlChannels;
 
     void triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum);
-    void triggerTTLWord(uint64_t word, juce::int64 sample, uint64_t lastWord);
+    void triggerTTLWord(StringWord WordMsg, juce::int64 sampleNum);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NetworkEvents);
 };

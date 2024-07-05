@@ -286,7 +286,7 @@ String NetworkEvents::handleSpecialMessages(const String& s)
             if (CoreServices::getAcquisitionStatus())
             {
                 ScopedLock TTLWordLock(TTLWordQueueLock);
-                TTLWordQueue.push(word);
+                TTLWordQueue.push({word, Time::getHighResolutionTicks()});
             }
             return "TTLHandled: Word=" + String(word);
         }
@@ -310,7 +310,7 @@ String NetworkEvents::handleSpecialMessages(const String& s)
             if (CoreServices::getAcquisitionStatus())
             {
                 ScopedLock TTLlock(TTLqueueLock);
-                TTLQueue.push({onOff, line});
+                TTLQueue.push({onOff, line, Time::getHighResolutionTicks()});
             }
 
             return "TTLHandled: Line=" + String(line + 1) + " State=" + String(static_cast<int>(onOff));
@@ -322,23 +322,33 @@ String NetworkEvents::handleSpecialMessages(const String& s)
     return String("NotHandled");
 }
 
+int64 getCurrentSampleOffsetFromTickTimestamp(int64 tickTimestamp, double sampleRate)
+{
+    const double samplesPerTick = sampleRate / Time::getHighResolutionTicksPerSecond();
+    return ((tickTimestamp - Time::getHighResolutionTicks()) * samplesPerTick);
+}
+
 void NetworkEvents::triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum)
 {
     for (auto ttlChannel : ttlChannels)
     {
-        TTLEventPtr event = TTLEvent::createTTLEvent(ttlChannel, sampleNum, TTLmsg.eventLine, TTLmsg.onOff);
-        addEvent(event, 0);
+        const int64 sampleOffset =
+            getCurrentSampleOffsetFromTickTimestamp(TTLmsg.tickTimestampMsgReceived, ttlChannel->getSampleRate());
+        TTLEventPtr event =
+            TTLEvent::createTTLEvent(ttlChannel, sampleNum + sampleOffset, TTLmsg.eventLine, TTLmsg.onOff);
+        addEvent(event, 0); // TODO: Does sampleNum have to be 0?
     }
 }
 
-void NetworkEvents::triggerTTLWord(uint64_t word, juce::int64 sample, uint64_t lastWord)
+void NetworkEvents::triggerTTLWord(StringWord wordMsg, juce::int64 sample)
 {
     for (const auto ttlChannel : ttlChannels)
     {
-
-        // TODO: Why does sampleNum have to be 0?
-        // TODO: Do the values of line and state have any meaning?
-        addEvent(TTLEvent::createTTLEvent(ttlChannel, sample, 0, (word >> 0) & 0x01, word), 0);
+        const int64 sampleOffset = getCurrentSampleOffsetFromTickTimestamp(wordMsg.tickTimestampMsgReceived, ttlChannel->getSampleRate());
+        addEvent(
+            TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, 0, (wordMsg.word >> 0) & 0x01, wordMsg.word),
+            0); // TODO: Does sampleNum have to be 0?
+        
     }
 }
 
@@ -375,8 +385,7 @@ void NetworkEvents::process(AudioBuffer<float>& buffer)
                 ScopedLock TTLWordLock(TTLWordQueueLock);
                 while (!TTLWordQueue.empty())
                 {
-                    triggerTTLWord(TTLWordQueue.front(), sampNum, lastReceivedTTLWord);
-                    lastReceivedTTLWord = TTLWordQueue.front();
+                    triggerTTLWord(TTLWordQueue.front(), sampNum);
                     TTLWordQueue.pop();
                 }
             }
