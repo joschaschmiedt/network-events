@@ -2,7 +2,7 @@
     ------------------------------------------------------------------
 
     This file is part of the Open Ephys GUI
-    Copyright (C) 2013 Open Ephys
+    Copyright (C) 2024 Open Ephys
 
     ------------------------------------------------------------------
 
@@ -34,89 +34,19 @@ NetworkEventsEditor::NetworkEventsEditor(NetworkEvents* parentNode)
     
     processor = parentNode;
 
-	restartConnection = std::make_unique<UtilityButton>("Restart Connection", Font("Fira Code", "Regular", 15.0f));
-    restartConnection->setBounds(20,45,130,18);
+	restartConnection = std::make_unique<UtilityButton>("Restart");
+    restartConnection->setBounds(20,45,130,22);
     restartConnection->addListener(this);
     addAndMakeVisible(restartConnection.get());
-    
-    urlLabel = std::make_unique<Label>("Port", "Port:");
-    urlLabel->setBounds(20,85,140,25);
-    addAndMakeVisible(urlLabel.get());
 
-	labelPort = std::make_unique<Label>("Port", processor->getCurrPortString());
-    labelPort->setBounds(70,85,80,18);
-    labelPort->setColour(Label::textColourId, Colours::white);
-    labelPort->setColour(Label::backgroundColourId, Colours::grey);
-    labelPort->setEditable(true);
-    labelPort->addListener(this);
-    addAndMakeVisible(labelPort.get());
+    addTextBoxParameterEditor(Parameter::ParameterScope::PROCESSOR_SCOPE, "port", 20, 85);
 }
-
-
-
-void NetworkEventsEditor::buttonClicked(Button* button)
-{
-	if (button == restartConnection.get())
-	{
-		processor->restartConnection();
-	}
-}
-
-void NetworkEventsEditor::setLabelColor(juce::Colour color)
-{
-	labelPort->setColour(Label::backgroundColourId, color);
-}
-
-
-void NetworkEventsEditor::setPortText(const String& text)
-{
-    labelPort->setText(text, dontSendNotification);
-}
-
-
-void NetworkEventsEditor::labelTextChanged(juce::Label *label)
-{
-    if (label == labelPort.get())
-    {
-        NetworkEvents *p = (NetworkEvents *)getProcessor();
-        
-        uint16 port;
-        if (!portFromString(label->getText(), &port))
-        {
-            CoreServices::sendStatusMessage("NetworkEvents: Invalid port");
-            setPortText(p->getCurrPortString());
-            return;
-        }
-
-        p->setNewListeningPort(port);
-	}
-}
-
 
 NetworkEventsEditor::~NetworkEventsEditor()
 {
-
 }
 
-
-bool NetworkEventsEditor::portFromString(const String& portString, uint16* port)
+void NetworkEventsEditor::buttonClicked(Button* button)
 {
-    if (portString.trim() == "*") // wildcard, special case
-    {
-        *port = 0;
-        return true;
-    }
-
-    if (portString.indexOfAnyOf("0123456789") == -1)
-    {
-        return false;
-    }
-
-    int32 portInput = portString.getIntValue();
-    if (portInput <= 0 || portInput > (1 << 16) - 1)
-    {
-        return false;
-    }
-    *port = static_cast<uint16>(portInput);
-    return true;
+    processor->restartConnection();
 }

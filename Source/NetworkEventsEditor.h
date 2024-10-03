@@ -2,7 +2,7 @@
     ------------------------------------------------------------------
 
     This file is part of the Open Ephys GUI
-    Copyright (C) 2013 Open Ephys
+    Copyright (C) 2024 Open Ephys
 
     ------------------------------------------------------------------
 
@@ -21,7 +21,6 @@
 
 */
 
-
 #ifndef __NETWORKEVENTSEDITOR_H_D6EC8B49__
 #define __NETWORKEVENTSEDITOR_H_D6EC8B49__
 
@@ -29,43 +28,33 @@
 
 class NetworkEvents;
 
-
 /**
 
-  User interface for the "FileReader" source node.
+  User interface for the NetworkEvents processor
 
-  @see SourceNode, FileReaderThread
+  @see NetworkEvents
 
 */
 
 class NetworkEventsEditor : public GenericEditor, 
-                            public Button::Listener,
-                            public Label::Listener
+                            public Button::Listener
 {
 public:
+    /** Constructor */
     NetworkEventsEditor(NetworkEvents* parentNode);
+
+    /** Destructor */
     virtual ~NetworkEventsEditor();
 
+    /** Respond to button clicks */
     void buttonClicked(Button* button) override;
-	void labelTextChanged(juce::Label *);
-	void setLabelColor(juce::Colour color);
-    void setPortText(const String& text);
+
 private:
     NetworkEvents* processor;
 
-    // interprets input string as a port number (1-65535); returns false if invalid
-    // or out of range, else sets *port to parsed value. as a special case, if portString
-    // is "*", sets *port to 0 and returns true.
-    static bool portFromString(const String& portString, uint16* port);
-
 	std::unique_ptr<UtilityButton> restartConnection;
-    std::unique_ptr<Label> urlLabel;
-	std::unique_ptr<Label> labelPort;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NetworkEventsEditor);
-
 };
-
-
 
 #endif  // __NETWORKEVENTSEDITOR_H_D6EC8B49__
