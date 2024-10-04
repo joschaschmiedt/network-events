@@ -65,6 +65,7 @@ if(MSVC)
 	target_compile_options(${PLUGIN_NAME} PRIVATE /sdl- /W0)
 	
 	install(TARGETS ${PLUGIN_NAME} RUNTIME DESTINATION ${GUI_BIN_DIR}/plugins  CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
+	install(FILES $<TARGET_PDB_FILE:${PLUGIN_NAME}> DESTINATION  ${GUI_BIN_DIR}/plugins OPTIONAL)
 
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/windows)
 elseif(LINUX)
@@ -81,9 +82,13 @@ elseif(APPLE)
 	set_property(TARGET ${PLUGIN_NAME} APPEND_STRING PROPERTY LINK_FLAGS
 	"-undefined dynamic_lookup -rpath @loader_path/../../../../shared-api9")
 
-	add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND
-	install_name_tool -change "/usr/local/lib/libzmq.5.dylib" "@rpath/libzmq.5.dylib"
-	$<TARGET_FILE:${PLUGIN_NAME}>)
+	set_target_properties(${PLUGIN_NAME} PROPERTIES
+		XCODE_ATTRIBUTE_CODE_SIGN_IDENTITY ""
+		XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED NO)
+
+	# add_custom_command(TARGET ${PLUGIN_NAME} POST_BUILD COMMAND
+	# install_name_tool -change "/usr/local/lib/libzmq.5.dylib" "@rpath/libzmq.5.dylib"
+	# $<TARGET_FILE:${PLUGIN_NAME}>)
 
 	install(TARGETS ${PLUGIN_NAME} DESTINATION $ENV{HOME}/Library/Application\ Support/open-ephys/plugins-api9)
 	set(CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/libs/macos)
@@ -98,7 +103,7 @@ foreach( src_file IN ITEMS ${SRC_FILES})
 	source_group("${group_name}" FILES "${src_file}")
 endforeach()
 
-#on windows, copy the dlls when installing
+#copy the dlls when installing
 if (MSVC)
 	install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/libs/windows/bin/${CMAKE_LIBRARY_ARCHITECTURE}/ DESTINATION ${GUI_BIN_DIR}/shared CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
 elseif(LINUX)
