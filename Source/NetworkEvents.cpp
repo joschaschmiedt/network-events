@@ -1,23 +1,23 @@
 /*
-     ------------------------------------------------------------------
+    ------------------------------------------------------------------
 
-     This file is part of the Open Ephys GUI
-     Copyright (C) 2016-2024 Open Ephys
+    This file is part of the Open Ephys GUI
+    Copyright (C) 2016-2025 Open Ephys
 
-     ------------------------------------------------------------------
+    ------------------------------------------------------------------
 
-     This program is free software: you can redistribute it and/or modify
-     it under the terms of the GNU General Public License as published by
-     the Free Software Foundation, either version 3 of the License, or
-     (at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-     This program is distributed in the hope that it will be useful,
-     but WITHOUT ANY WARRANTY; without even the implied warranty of
-     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-     GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-     You should have received a copy of the GNU General Public License
-     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -46,6 +46,19 @@ NetworkEvents::NetworkEvents()
                              // since this processor only sends events
 }
 
+void NetworkEvents::registerParameters()
+{
+    addIntParameter(Parameter::ParameterScope::PROCESSOR_SCOPE, "port", "Port", "Port to bind", 5556, 0, 65535, true);
+}
+
+void NetworkEvents::parameterValueChanged(Parameter* param)
+{
+    if (param->getName() == "port")
+    {
+        setNewListeningPort(((IntParameter*)param)->getIntValue(), true);
+    }
+}
+
 void NetworkEvents::setNewListeningPort(uint16 port, bool synchronous)
 {
     requestedPort = port;
@@ -70,11 +83,6 @@ NetworkEvents::~NetworkEvents()
     }
 }
 
-String NetworkEvents::getCurrPortString() const
-{
-    return getPortString(boundPort);
-}
-
 void NetworkEvents::restartConnection()
 {
     requestedPort = boundPort.load();
@@ -96,7 +104,7 @@ void NetworkEvents::updateSettings()
                                                   "external.network.ttl", getDataStream(stream->getStreamId())};
 
         ttlChan = new EventChannel(ttlChannelSettings);
-        ttlChan->addProcessor(processorInfo.get());
+        ttlChan->addProcessor(this);
         eventChannels.add(ttlChan);
         ttlChannels.add(ttlChan);
     }
@@ -408,7 +416,8 @@ void NetworkEvents::run()
         boundPort = responder->getBoundPort();
     }
     else
-    {
+    { 
+        LOGE("Failed to bind to port");
         responder = nullptr;
         boundPort = 0;
     }
@@ -444,8 +453,6 @@ void NetworkEvents::run()
             {
                 newResponder->reportErr("Failed to connect to port " + String(nextPort));
             }
-
-            updatePortString(boundPort);
         }
 
         // if we don't have a vaild (connected) socket, keep looping until we do
@@ -484,32 +491,6 @@ void NetworkEvents::run()
 #endif
 }
 
-void NetworkEvents::saveCustomParametersToXml(XmlElement* parentElement)
-{
-    XmlElement* mainNode = parentElement->createNewChildElement("NETWORKEVENTS");
-    uint16 currBoundPort = boundPort;
-    // save the actual bound port if any, otherwise the last attempted port.
-    mainNode->setAttribute("port", currBoundPort ? currBoundPort : requestedPort.load());
-}
-
-void NetworkEvents::loadCustomParametersFromXml(XmlElement* parentElement)
-{
-    if (parentElement != nullptr)
-    {
-        forEachXmlChildElement(*parentElement, mainNode)
-        {
-            if (mainNode->hasTagName("NETWORKEVENTS"))
-            {
-                auto port = static_cast<uint16>(mainNode->getIntAttribute("port"));
-                if (port != 0)
-                {
-                    // async so that any lingering instances will be destroyed first
-                    setNewListeningPort(port, false);
-                }
-            }
-        }
-    }
-}
 
 StringPairArray NetworkEvents::parseNetworkMessage(StringRef msg)
 {
@@ -531,34 +512,11 @@ StringPairArray NetworkEvents::parseNetworkMessage(StringRef msg)
     return dict;
 }
 
-void NetworkEvents::updatePortString(uint16 port)
-{
-    auto ed = static_cast<NetworkEventsEditor*>(getEditor());
-    if (ed)
-    {
-        const MessageManagerLock mmLock;
-        ed->setPortText(getPortString(port));
-    }
-}
-
 String NetworkEvents::getEndpoint(uint16 port)
 {
     return "tcp://*:" + (port == 0 ? "*" : String(port));
 }
 
-String NetworkEvents::getPortString(uint16 port)
-{
-#ifdef ZEROMQ
-    if (port == 0)
-    {
-        return "<no cxn>";
-    }
-
-    return String(port);
-#else
-    return "<no zeromq>";
-#endif
-}
 
 /*** ZMQContext ***/
 

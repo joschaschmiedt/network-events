@@ -1,8 +1,8 @@
 /*
         ------------------------------------------------------------------
 
-        This file is part of the Open Ephys GUI
-        Copyright (C) 2016-2024 Open Ephys
+    This file is part of the Open Ephys GUI
+    Copyright (C) 2024 Open Ephys
 
         ------------------------------------------------------------------
 
@@ -46,35 +46,30 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     /** Constructor */
     NetworkEvents();
 
-    /** Destructor -- stops the network thread*/
+    /** Destructor -- stops the network thread */
     ~NetworkEvents();
 
-    // GenericProcessor methods
-    // =========================================================================
+    /** Creates the editor */
     AudioProcessorEditor* createEditor() override;
 
-    /** Triggers TTLs on the appropriate channel*/
-    void process(AudioBuffer<float>& buffer) override;
+    /** Registers parameters */
+    void registerParameters();
 
-    /** Updates settings*/
+    void parameterValueChanged(Parameter*) override;
+
+    /** Triggers TTLs on the appropriate channel */
+    void process (AudioBuffer<float>& buffer) override;
+
+    /** Updates settings */
     void updateSettings() override;
 
-    /** Saves parameters*/
-    void saveCustomParametersToXml(XmlElement* parentElement) override;
-
-    /** Loads parameters */
-    void loadCustomParametersFromXml(XmlElement* parentElement) override;
-
-    // =========================================================================
-
+    /** Runs the messaging thread */
     void run() override;
 
-    // passing 0 corresponds to wildcard ("*") and picks any available port
-    void setNewListeningPort(uint16 port, bool synchronous = true);
+    /** Sets the port to bind to */
+    void setNewListeningPort (uint16 port, bool synchronous = true);
 
-    // gets a string for the editor's port input to reflect current urlport
-    String getCurrPortString() const;
-
+    /** Restarts the connection */
     void restartConnection();
 
   private:
@@ -104,32 +99,29 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZMQContext);
     };
 
-    // RAII wrapper for REP socket
+    /* RAII wrapper for REP socket */
     class Responder
     {
-      public:
-        // creates socket from given context and tries to bind to port.
-        // if port is 0, chooses an available ephemeral port.
+    public:
+        /* Creates socket from given context and tries to bind to port. If port is 0, chooses an available ephemeral port. */
         Responder(uint16 port);
         ~Responder();
 
-        // returns the latest errno value
+        /* Returns the latest errno value */
         int getErr() const;
 
-        // output last error on stdout and status bar, including the passed message
+        /* Output last error on stdout and status bar, including the passed message */
         void reportErr(const String& message) const;
 
         bool isValid() const;
 
-        // returns the port if the socket was successfully bound to one, else 0
-        // if not, or if the socket is invalid, returns 0.
+        /* Returns the port if the socket was successfully bound to one, else 0. If not, or if the socket is invalid, returns 0. */
         uint16 getBoundPort() const;
 
-        // receives message into buf (blocking call).
-        // returns the number of bytes actually received, or -1 if there is an error.
+        /* Receives message into buf (blocking call). Returns the number of bytes actually received, or -1 if there is an error. */
         int receive(void* buf);
 
-        // sends a message. returns the same as zmq_send.
+        /* Sends a message. returns the same as zmq_send. */
         int send(StringRef response);
 
       private:
@@ -142,23 +134,17 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
         static const int RECV_TIMEOUT_MS;
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Responder);
-    };
+};
 
     void handleAsyncUpdate() override; // to change port asynchronously
 
     String handleSpecialMessages(const String& s);
 
-    //* Split network message into name/value pairs (name1=val1 name2=val2 etc) */
+    /* Split network message into name/value pairs (name1=val1 name2=val2 etc) */
     StringPairArray parseNetworkMessage(StringRef msg);
 
-    // updates urlport and the port input on the editor (< 0 indicates not connected)
-    void updatePortString(uint16 port);
-
-    // get an endpoint url for the given port (using 0 to represent *)
+    /* Get an endpoint url for the given port (using 0 to represent *) */
     static String getEndpoint(uint16 port);
-
-    // get a representation of the given port for use on the editor
-    static String getPortString(uint16 port);
 
     std::atomic<bool> makeNewSocket;   // port change or restart needed (depending on requestedPort)
     std::atomic<uint16> requestedPort; // never set by the thread; 0 means any free port
