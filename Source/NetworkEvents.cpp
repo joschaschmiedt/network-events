@@ -350,13 +350,18 @@ void NetworkEvents::triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum)
 
 void NetworkEvents::triggerTTLWord(StringWord wordMsg, juce::int64 sample)
 {
-    for (const auto ttlChannel : ttlChannels)
+    for (auto* ttlChannel : ttlChannels)
     {
-        const int64 sampleOffset = getCurrentSampleOffsetFromTickTimestamp(wordMsg.tickTimestampMsgReceived, ttlChannel->getSampleRate());
-        addEvent(
-            TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, 0, (wordMsg.word >> 0) & 0x01, wordMsg.word),
-            0); // TODO: Does sampleNum have to be 0?
-        
+        const int64 sampleOffset =
+            getCurrentSampleOffsetFromTickTimestamp(wordMsg.tickTimestampMsgReceived, ttlChannel->getSampleRate());
+
+        const auto events = TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, wordMsg.word);
+        for (const auto& event : events)
+            addEvent(event, sample);
+
+        // addEvent(event, 0);
+        // TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, 0, (wordMsg.word >> 0) & 0x01, wordMsg.word),
+        // 0); // TODO: Does sampleNum have to be 0?
     }
 }
 
@@ -416,7 +421,7 @@ void NetworkEvents::run()
         boundPort = responder->getBoundPort();
     }
     else
-    { 
+    {
         LOGE("Failed to bind to port");
         responder = nullptr;
         boundPort = 0;
@@ -491,7 +496,6 @@ void NetworkEvents::run()
 #endif
 }
 
-
 StringPairArray NetworkEvents::parseNetworkMessage(StringRef msg)
 {
     StringArray args = StringArray::fromTokens(msg, " ", "'\"");
@@ -516,7 +520,6 @@ String NetworkEvents::getEndpoint(uint16 port)
 {
     return "tcp://*:" + (port == 0 ? "*" : String(port));
 }
-
 
 /*** ZMQContext ***/
 
