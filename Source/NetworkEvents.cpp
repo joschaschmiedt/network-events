@@ -350,6 +350,10 @@ void NetworkEvents::triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum)
 
 void NetworkEvents::triggerTTLWord(StringWord wordMsg, juce::int64 sample)
 {
+    // ignore unchanged words
+    if (wordMsg.word == lastWord)
+        return;
+
     for (auto* ttlChannel : ttlChannels)
     {
         const int64 sampleOffset =
@@ -357,12 +361,12 @@ void NetworkEvents::triggerTTLWord(StringWord wordMsg, juce::int64 sample)
 
         const auto events = TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, wordMsg.word);
         for (const auto& event : events)
+        {
             addEvent(event, sample);
-
-        // addEvent(event, 0);
-        // TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, 0, (wordMsg.word >> 0) & 0x01, wordMsg.word),
-        // 0); // TODO: Does sampleNum have to be 0?
+        }
     }
+
+    lastWord = wordMsg.word;
 }
 
 void NetworkEvents::process(AudioBuffer<float>& buffer)

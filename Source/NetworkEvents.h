@@ -164,6 +164,7 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
 
     void triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum);
     void triggerTTLWord(StringWord WordMsg, juce::int64 sampleNum);
+    uint64 lastWord = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(NetworkEvents);
 };
