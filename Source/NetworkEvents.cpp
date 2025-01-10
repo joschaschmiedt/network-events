@@ -55,7 +55,7 @@ void NetworkEvents::parameterValueChanged(Parameter* param)
 {
     if (param->getName() == "port")
     {
-        setNewListeningPort(((IntParameter*)param)->getIntValue(), true);
+        setNewListeningPort(static_cast<juce::uint16>(static_cast<IntParameter*>(param)->getIntValue()), true);
     }
 }
 
@@ -78,14 +78,16 @@ NetworkEvents::~NetworkEvents()
     if (!stopThread(1000))
     {
         jassertfalse; // shouldn't block for more than 100 ms, something's wrong
-        std::cerr << "Network thread timeout. Forcing thread termination, system could be left in an unstable state"
-                  << std::endl;
+        LOGE("Network thread timeout. Forcing thread termination, system could be left in an unstable state")
     }
 }
 
 void NetworkEvents::restartConnection()
 {
     requestedPort = boundPort.load();
+#ifdef DEBUG
+    LOGC("Restarting ZMQ connection on port ", requestedPort);
+#endif
     makeNewSocket = true;
 }
 
@@ -94,14 +96,14 @@ void NetworkEvents::updateSettings()
 
     ttlChannels.clear();
 
-    for (auto stream : getDataStreams())
+    for (const auto stream : getDataStreams())
     {
 
         // TTL Channel
         EventChannel* ttlChan;
-        EventChannel::Settings ttlChannelSettings{EventChannel::Type::TTL, "Network Events output",
-                                                  "Triggers whenever \"TTL\" is received on the port.",
-                                                  "external.network.ttl", getDataStream(stream->getStreamId())};
+        const EventChannel::Settings ttlChannelSettings{EventChannel::Type::TTL, "Network Events output",
+                                                        "Triggers whenever \"TTL\" is received on the port.",
+                                                        "external.network.ttl", getDataStream(stream->getStreamId())};
 
         ttlChan = new EventChannel(ttlChannelSettings);
         ttlChan->addProcessor(this);
@@ -130,7 +132,7 @@ String NetworkEvents::handleSpecialMessages(const String& s)
     StringPairArray dict; // paramater key,value pairs
     StringArray keys;
     bool recNode = false;
-    int recId;
+    int recId = -1;
 
     // check for extra parameters
     if (s.contains("="))
@@ -318,7 +320,7 @@ String NetworkEvents::handleSpecialMessages(const String& s)
             if (CoreServices::getAcquisitionStatus())
             {
                 ScopedLock TTLlock(TTLqueueLock);
-                TTLQueue.push({onOff, line, Time::getHighResolutionTicks()});
+                TTLQueue.push({onOff, static_cast<uint8>(line), Time::getHighResolutionTicks()});
             }
 
             return "TTLHandled: Line=" + String(line + 1) + " State=" + String(static_cast<int>(onOff));
@@ -333,12 +335,12 @@ String NetworkEvents::handleSpecialMessages(const String& s)
 int64 getCurrentSampleOffsetFromTickTimestamp(int64 tickTimestamp, double sampleRate)
 {
     const double samplesPerTick = sampleRate / Time::getHighResolutionTicksPerSecond();
-    return ((tickTimestamp - Time::getHighResolutionTicks()) * samplesPerTick);
+    return static_cast<int64>(std::round((tickTimestamp - Time::getHighResolutionTicks()) * samplesPerTick));
 }
 
 void NetworkEvents::triggerTTLEvent(StringTTL TTLmsg, juce::int64 sampleNum)
 {
-    for (auto ttlChannel : ttlChannels)
+    for (const auto ttlChannel : ttlChannels)
     {
         const int64 sampleOffset =
             getCurrentSampleOffsetFromTickTimestamp(TTLmsg.tickTimestampMsgReceived, ttlChannel->getSampleRate());
@@ -362,7 +364,7 @@ void NetworkEvents::triggerTTLWord(StringWord wordMsg, juce::int64 sample)
         const auto events = TTLEvent::createTTLEvent(ttlChannel, sample + sampleOffset, wordMsg.word);
         for (const auto& event : events)
         {
-            addEvent(event, sample);
+            addEvent(event, static_cast<int>(sample));
         }
     }
 
@@ -371,12 +373,12 @@ void NetworkEvents::triggerTTLWord(StringWord wordMsg, juce::int64 sample)
 
 void NetworkEvents::process(AudioBuffer<float>& buffer)
 {
-    for (auto stream : getDataStreams())
+    for (const auto stream : getDataStreams())
     {
 
         if ((*stream)["enable_stream"])
         {
-            juce::int64 sampNum = getFirstSampleNumberForBlock(stream->getStreamId());
+            const juce::int64 sampNum = getFirstSampleNumberForBlock(stream->getStreamId());
 
             {
                 ScopedLock lock(queueLock);
@@ -439,7 +441,7 @@ void NetworkEvents::run()
         // change socket if necessary
         while (makeNewSocket.exchange(false))
         {
-            uint16 nextPort = requestedPort;           // (maybe the newly entered port on the editor text box)
+            const uint16 nextPort = requestedPort;           // (maybe the newly entered port on the editor text box)
             if (nextPort > 0 && nextPort == boundPort) // i.e. this is a restart
             {
                 responder = nullptr; // destroy old one, which frees the port
@@ -471,11 +473,11 @@ void NetworkEvents::run()
             continue;
         }
 
-        int result = responder->receive(buffer); // times out after RECV_TIMEOUT_MS ms
-
+        const int result = responder->receive(buffer); // times out after RECV_TIMEOUT_MS ms
         if (result == -1)
         {
-            jassert(responder->getErr() == EAGAIN); // if not, figure out why!
+            jassert(responder->getErr() == EAGAIN); // no data is fine, try again later
+            if (responder->getErr() != EAGAIN) LOGE("Error while waiting for receiving data: ", responder->getErr())     
             continue;
         }
 
@@ -486,8 +488,9 @@ void NetworkEvents::run()
             networkMessagesQueue.push({msg});
         }
 
+        // TODO: Is it really necessary to broadcast all network events?
+        //       Start/Stop Acquisition/Recording is also handled in handleSpecialMessages.
         CoreServices::sendStatusMessage("Network event received: " + msg);
-        // std::cout << "Received message!" << std::endl;
 
         String response = handleSpecialMessages(msg);
 
@@ -508,7 +511,7 @@ StringPairArray NetworkEvents::parseNetworkMessage(StringRef msg)
     StringPairArray dict;
     for (const String& arg : args)
     {
-        int iEq = arg.indexOfChar('=');
+        const int iEq = arg.indexOfChar('=');
         if (iEq >= 0)
         {
             String key = arg.substring(0, iEq);
@@ -592,7 +595,7 @@ NetworkEvents::Responder::Responder(uint16 port) : socket(nullptr), valid(false)
             return;
         }
 
-        port = String(endpoint).getTrailingIntValue();
+        port = static_cast<uint16>(String(endpoint).getTrailingIntValue());
     }
 
     jassert(port > 0);
@@ -612,7 +615,7 @@ NetworkEvents::Responder::~Responder()
             zmq_unbind(socket, getEndpoint(boundPort).toRawUTF8());
         }
 
-        int linger = 0;
+        const int linger = 0;
         zmq_setsockopt(socket, ZMQ_LINGER, &linger, sizeof(linger));
         zmq_close(socket);
     }
@@ -627,8 +630,8 @@ int NetworkEvents::Responder::getErr() const
 void NetworkEvents::Responder::reportErr(const String& message) const
 {
 #ifdef ZEROMQ
-    String msg = "NetworkEvents: " + message + " (" + zmq_strerror(lastErrno) + ")";
-    std::cout << msg << std::endl;
+    const String msg = "NetworkEvents: " + message + " (" + zmq_strerror(lastErrno) + ")";
+    LOGE(msg)
     CoreServices::sendStatusMessage(msg);
 #endif
 };
@@ -664,7 +667,7 @@ int NetworkEvents::Responder::receive(void* buf)
 int NetworkEvents::Responder::send(StringRef response)
 {
 #ifdef ZEROMQ
-    int res = zmq_send(socket, response, response.length(), 0);
+    const int res = zmq_send(socket, response, response.length(), 0);
     if (res == -1)
     {
         lastErrno = zmq_errno();

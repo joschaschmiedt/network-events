@@ -76,7 +76,7 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     struct StringTTL
     {
         bool onOff;
-        int eventLine;
+        uint8 eventLine;
         int64 tickTimestampMsgReceived; // timestamp of received message in high-resolution ticks
     };
 
