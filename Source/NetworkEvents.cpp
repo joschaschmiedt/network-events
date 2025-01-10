@@ -49,6 +49,8 @@ NetworkEvents::NetworkEvents()
 void NetworkEvents::registerParameters()
 {
     addIntParameter(Parameter::ParameterScope::PROCESSOR_SCOPE, "port", "Port", "Port to bind", 5556, 0, 65535, true);
+    addBooleanParameter(Parameter::ParameterScope::PROCESSOR_SCOPE, "broadcast_all_messages", "Broadcast",
+                        "Broadcast all incoming messages to other nodes", false, false);
 }
 
 void NetworkEvents::parameterValueChanged(Parameter* param)
@@ -56,6 +58,10 @@ void NetworkEvents::parameterValueChanged(Parameter* param)
     if (param->getName() == "port")
     {
         setNewListeningPort(static_cast<juce::uint16>(static_cast<IntParameter*>(param)->getIntValue()), true);
+    }
+    if (param->getName() == "broadcast_all_messages")
+    {
+        setBroadcastAllMessages(static_cast<BooleanParameter*>(param)->getBoolValue());
     }
 }
 
@@ -71,6 +77,11 @@ void NetworkEvents::setNewListeningPort(uint16 port, bool synchronous)
     {
         triggerAsyncUpdate();
     }
+}
+
+void NetworkEvents::setBroadcastAllMessages(bool broadcastAllMessages_)
+{
+    broadcastAllMessages.store(broadcastAllMessages_);
 }
 
 NetworkEvents::~NetworkEvents()
@@ -441,7 +452,7 @@ void NetworkEvents::run()
         // change socket if necessary
         while (makeNewSocket.exchange(false))
         {
-            const uint16 nextPort = requestedPort;           // (maybe the newly entered port on the editor text box)
+            const uint16 nextPort = requestedPort;     // (maybe the newly entered port on the editor text box)
             if (nextPort > 0 && nextPort == boundPort) // i.e. this is a restart
             {
                 responder = nullptr; // destroy old one, which frees the port
@@ -477,20 +488,20 @@ void NetworkEvents::run()
         if (result == -1)
         {
             jassert(responder->getErr() == EAGAIN); // no data is fine, try again later
-            if (responder->getErr() != EAGAIN) LOGE("Error while waiting for receiving data: ", responder->getErr())     
+            if (responder->getErr() != EAGAIN)
+                LOGE("Error while waiting for receiving data: ", responder->getErr())
             continue;
         }
 
         // received message. read string from the buffer.
         String msg = String::fromUTF8(buffer, result);
+
+        if (broadcastAllMessages)
         {
+            CoreServices::sendStatusMessage("Network event received: " + msg);
             ScopedLock lock(queueLock);
             networkMessagesQueue.push({msg});
         }
-
-        // TODO: Is it really necessary to broadcast all network events?
-        //       Start/Stop Acquisition/Recording is also handled in handleSpecialMessages.
-        CoreServices::sendStatusMessage("Network event received: " + msg);
 
         String response = handleSpecialMessages(msg);
 

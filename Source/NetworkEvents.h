@@ -47,13 +47,13 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     NetworkEvents();
 
     /** Destructor -- stops the network thread */
-    ~NetworkEvents();
+    ~NetworkEvents() override;
 
     /** Creates the editor */
     AudioProcessorEditor* createEditor() override;
 
     /** Registers parameters */
-    void registerParameters();
+    void registerParameters() override;
 
     void parameterValueChanged(Parameter*) override;
 
@@ -68,6 +68,9 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
 
     /** Sets the port to bind to */
     void setNewListeningPort (uint16 port, bool synchronous = true);
+
+    /** Broadcast all incoming messages **/
+    void setBroadcastAllMessages(bool);
 
     /** Restarts the connection */
     void restartConnection();
@@ -149,6 +152,8 @@ class NetworkEvents : public GenericProcessor, public Thread, private AsyncUpdat
     std::atomic<bool> makeNewSocket;   // port change or restart needed (depending on requestedPort)
     std::atomic<uint16> requestedPort; // never set by the thread; 0 means any free port
     std::atomic<uint16> boundPort;     // only set by the thread; 0 means no connection
+
+    std::atomic_bool broadcastAllMessages;
 
     std::queue<String> networkMessagesQueue;
     CriticalSection queueLock;

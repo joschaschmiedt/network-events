@@ -26,25 +26,23 @@
 
 #include <stdio.h>
 
-NetworkEventsEditor::NetworkEventsEditor(NetworkEvents* parentNode)
-    : GenericEditor(parentNode)
+NetworkEventsEditor::NetworkEventsEditor(NetworkEvents* parentNode) : GenericEditor(parentNode)
 
 {
-	desiredWidth = 180;
-    
+    desiredWidth = 180;
+
     processor = parentNode;
 
-	restartConnection = std::make_unique<UtilityButton>("Restart");
-    restartConnection->setBounds(20,45,130,22);
+    restartConnection = std::make_unique<UtilityButton>("Restart");
+    restartConnection->setBounds(20, 45, 130, 22);
     restartConnection->addListener(this);
     addAndMakeVisible(restartConnection.get());
 
-    addTextBoxParameterEditor(Parameter::ParameterScope::PROCESSOR_SCOPE, "port", 20, 85);
+    addTextBoxParameterEditor(Parameter::ParameterScope::PROCESSOR_SCOPE, "port", 20, 80);
+    addToggleParameterEditor(Parameter::ParameterScope::PROCESSOR_SCOPE, "broadcast_all_messages", 20, 100);
 }
 
-NetworkEventsEditor::~NetworkEventsEditor()
-{
-}
+NetworkEventsEditor::~NetworkEventsEditor() = default;
 
 void NetworkEventsEditor::buttonClicked(Button* button)
 {
