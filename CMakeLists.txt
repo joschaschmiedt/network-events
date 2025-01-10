@@ -62,7 +62,7 @@ endif()
 #Libraries and compiler options
 if(MSVC)
 	target_link_libraries(${PLUGIN_NAME} ${GUI_BIN_DIR}/open-ephys.lib)
-	target_compile_options(${PLUGIN_NAME} PRIVATE /sdl- /W0)
+  target_compile_options(${PLUGIN_NAME} PRIVATE /sdl /W4 /external:W0 /external:anglebrackets /MP)
 	
 	install(TARGETS ${PLUGIN_NAME} RUNTIME DESTINATION ${GUI_BIN_DIR}/plugins  CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
 	install(FILES $<TARGET_PDB_FILE:${PLUGIN_NAME}> DESTINATION  ${GUI_BIN_DIR}/plugins OPTIONAL)
